@@ -208,6 +208,10 @@ public class BootSignature extends ASN1Object
                 + ((ramdskSize + pageSize - 1) / pageSize) * pageSize
                 + ((secondSize + pageSize - 1) / pageSize) * pageSize;
 
+//SWISTART - add DT size
+        length +=  ((image.getInt() + pageSize - 1) / pageSize) * pageSize;
+//SWISTOP
+
         length = ((length + pageSize - 1) / pageSize) * pageSize;
 
         if (length <= 0) {
@@ -224,7 +228,23 @@ public class BootSignature extends ASN1Object
                                     String outPath) throws Exception {
 
         byte[] image = Utils.read(imagePath);
-        int signableSize = getSignableImageSize(image);
+//SWISTART - padding for raw images
+//        int signableSize = getSignableImageSize(image);
+        int signableSize, pageSize;
+
+        if (target.equals("/boot") || target.equals("/recovery")) {
+            signableSize = getSignableImageSize(image);
+        }
+        else {
+            // raw image, padding image to 4K
+            pageSize = 4096;
+            signableSize = image.length;
+            signableSize = ((signableSize + pageSize - 1) / pageSize) * pageSize;
+            System.err.println("NOTE: padding file " + imagePath +
+                    " from " + image.length + " to " + signableSize + " bytes");
+            image = Arrays.copyOf(image, signableSize);
+        }
+//SWISTOP
 
         if (signableSize < image.length) {
             System.err.println("NOTE: truncating file " + imagePath +
